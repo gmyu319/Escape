@@ -56,11 +56,6 @@ public:
                     mVelocity *= -1.0f;
                 }
             }
-            else
-            {
-                mProfessorNode->setPosition(mProfessorNode->getPosition().x, mProfessorNode->getPosition().y, 250.0f);
-                mVelocity *= -1.0f;
-            }
         }
 
         if (mProfessorNode->getPosition().z < -250.0f)
@@ -77,11 +72,6 @@ public:
                     mProfessorNode->setPosition(mProfessorNode->getPosition().x, mProfessorNode->getPosition().y, -250.0f);
                     mVelocity *= -1.0f;
                 }
-            }
-            else
-            {
-                mProfessorNode->setPosition(mProfessorNode->getPosition().x, mProfessorNode->getPosition().y, -250.0f);
-                mVelocity *= -1.0f;
             }
         }
 
