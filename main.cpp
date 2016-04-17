@@ -1,3 +1,5 @@
+//#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")
+
 #define CLIENT_DESCRIPTION "Quaternion"
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
@@ -5,13 +7,20 @@
 #include "windows.h"
 #endif
 
+#include <iostream>
+#include "BulletList.h"
+#include <string>
+
 #include <Ogre.h>
 #include <OIS/OIS.h>
 
-
+using namespace std;
 using namespace Ogre;
 
 bool g_bRun = false;
+CBulletList bulletList;
+const int Max_Bullet = 30;
+bool g_bMarked[Max_Bullet];
 
 class ESCListener : public FrameListener {
     OIS::Keyboard *mKeyboard;
@@ -25,12 +34,12 @@ public:
     }
 };
 
-
 class MainListener : public FrameListener {
     OIS::Keyboard *mKeyboard;
     Root* mRoot;
     Camera* mCamera;
     SceneNode *mProfessorNode;
+    SceneNode *mBulletNode[Max_Bullet];
     Vector3 mCameraPos;
     float m_fSpeed = 0.2f;
 
@@ -39,6 +48,12 @@ public:
     {
         mCamera = mRoot->getSceneManager("main")->getCamera("main");
         mProfessorNode = mRoot->getSceneManager("main")->getSceneNode("Professor");
+
+        string strBullet = "Bullet";
+        for (int i = 0; i < Max_Bullet; ++i)
+        {
+            mBulletNode[i] = mRoot->getSceneManager("main")->getSceneNode(strBullet + to_string(i));
+        }
 
         mCameraPos = mCamera->getPosition();
     }
@@ -72,6 +87,26 @@ public:
         }
 
         mCamera->setPosition(mCameraPos);
+
+        bulletList.Update(evt.timeSinceLastFrame);
+        CNode *start = bulletList.getHead()->m_next;
+        CNode *end = bulletList.getTail();
+        int tempKey;
+        for (int i = 0; i < Max_Bullet; ++i)
+            g_bMarked[i] = false;
+
+        while (start != end)
+        {
+            tempKey = start->getKey();
+            mBulletNode[tempKey]->setPosition(Vector3(start->mPos.x, start->mPos.y, start->mPos.z));
+            g_bMarked[tempKey] = true;
+            start = start->m_next;
+        }
+
+        for (int i = 0; i < Max_Bullet; ++i)
+        {
+            if(false == g_bMarked[i]) mBulletNode[i]->setPosition(Vector3(9999.0f, 9999.0f, 9999.0f));
+        }
 
         return true;
     }
@@ -143,6 +178,9 @@ public:
         //    mProfessorNode->setOrientation(Ogre::Quaternion::IDENTITY);
         //    break;
         //case OIS::KC_ESCAPE: mContinue = false; break;
+        case OIS::KC_R:
+            bulletList.Init();
+            break;
         case OIS::KC_LSHIFT :
             g_bRun ^= true;
             break;
@@ -173,6 +211,12 @@ public:
 
     bool mousePressed(const OIS::MouseEvent &evt, OIS::MouseButtonID id)
     {
+        if (evt.state.buttonDown(OIS::MB_Left))
+        {
+            bulletList.Add(mProfessorNode->getPosition().x, mProfessorNode->getPosition().y + 120.0f, mProfessorNode->getPosition().z,
+                0.0f, 0.0f, -1.0f);
+        }
+
         return true;
     }
 
@@ -242,6 +286,7 @@ public:
         mCamera->setAspectRatio(Real(mViewport->getActualWidth()) / Real(mViewport->getActualHeight()));
 
         ResourceGroupManager::getSingleton().addResourceLocation("resource.zip", "Zip");
+        ResourceGroupManager::getSingleton().addResourceLocation("fish.zip", "Zip");
         ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
 
         mSceneMgr->setAmbientLight(ColourValue(1.0f, 1.0f, 1.0f));
@@ -259,6 +304,18 @@ public:
         node1->rotate(Vector3(0.0f, 1.0f, 0.0f), Degree(180.0f));
         node1->attachObject(entity1);
 
+        string strBullet = "Bullet";
+        Entity* bullet[Max_Bullet];
+        SceneNode* bulletNode[Max_Bullet];
+        for (int i = 0; i < Max_Bullet; ++i)
+        {
+            bullet[i] = mSceneMgr->createEntity(strBullet + to_string(i), "fish.mesh");
+            bulletNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(strBullet + to_string(i), Vector3(0.0f, 0.0f, 0.0f));
+            bulletNode[i]->attachObject(bullet[i]);
+            bulletNode[i]->setScale(5.0f, 5.0f, 5.0f);
+            bulletNode[i]->rotate(Vector3(0.0f, 1.0f, 0.0f), Degree(-270.0f));
+            bulletNode[i]->setPosition(0.0f, 120.0f, -10.0f);
+        }
 
         size_t windowHnd = 0;
         std::ostringstream windowHndStr;
