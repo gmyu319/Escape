@@ -10,7 +10,7 @@ struct POSITION
 class CNode
 {
 public:
-    const int bulletSpeed = 2000.0f;
+    const int bulletSpeed = 6000.0f;
     float mLifeTime = 1.0f;
     POSITION mPos;
     POSITION mDir;
@@ -50,4 +50,3 @@ public:
     CNode * getHead() { return &head; }
     CNode * getTail() { return &tail; }
 };
-
