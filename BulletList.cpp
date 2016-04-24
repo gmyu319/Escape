@@ -50,7 +50,11 @@ void CBulletList::Update(float deltaTime)
         while (start != &tail)
         {
             start->mLifeTime -= deltaTime;
-            if (start->mLifeTime <= 0.0f) Remove(start);
+            if (start->mLifeTime <= 0.0f)
+            {
+                Remove(start);
+                return;
+            }
             else
             {
                 start->mPos.x += start->mDir.x * start->bulletSpeed * deltaTime;

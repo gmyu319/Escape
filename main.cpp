@@ -18,6 +18,7 @@ using namespace std;
 using namespace Ogre;
 
 bool g_bRun = false;
+bool g_bZoom = false;
 CBulletList bulletList;
 const int Max_Bullet = 30;
 bool g_bMarked[Max_Bullet];
@@ -215,6 +216,15 @@ public:
         {
             bulletList.Add(mProfessorNode->getPosition().x, mProfessorNode->getPosition().y + 120.0f, mProfessorNode->getPosition().z,
                 0.0f, 0.0f, -1.0f);
+        }
+        if (evt.state.buttonDown(OIS::MB_Right))
+        {
+            g_bZoom ^= true;
+
+            if (g_bZoom)
+                mCamera->setFOVy(Degree(20.0f));
+            else
+                mCamera->setFOVy(Degree(45.0f));
         }
 
         return true;
