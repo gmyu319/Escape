@@ -1,9 +1,12 @@
 #include "PlayState.h"
 #include "TitleState.h"
-
 #include "time.h"
 
 using namespace Ogre;
+
+#include <iostream>
+
+using namespace std;
 
 PlayState PlayState::mPlayState;
 bool g_bLeftButtonDown = false;
@@ -160,12 +163,26 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
     for (int i = 0; i < MAX_BULLET; ++i) g_bBulletMark[i] = false;
     while (start != end) {
         mBulletNode[start->getKey()]->setPosition(Vector3(start->mPos.x, start->mPos.y, start->mPos.z));
+        mBulletNode[start->getKey()]->setVisible(true);
         g_bBulletMark[start->getKey()] = true;
         start = start->m_next;
     }
     for (int i = 0; i < MAX_BULLET; ++i) {
         if (g_bBulletMark[i]) continue;
-        mBulletNode[i]->setPosition(Vector3(-9999.0f, -9999.0f, -9999.0f));
+        mBulletNode[i]->setVisible(false);
+    }
+
+    // collision check
+    for (int i = 0; i < MAX_BULLET; ++i) {
+        if (!g_bBulletMark[i]) continue;
+        Ogre::AxisAlignedBox bulletBox = mBulletNode[i]->_getWorldAABB();
+        for (int j = 0; j < NUM_OF_NPC; ++j) {
+            Ogre::AxisAlignedBox zombieBox = mZombieNode[j]->_getWorldAABB();
+            if (zombieBox.intersects(bulletBox)) {
+                mZombieNode[j]->setVisible(false);
+                j = NUM_OF_NPC;
+            }
+        }
     }
 
     // animation update
@@ -294,13 +311,13 @@ bool PlayState::mouseMoved(GameManager* game, const OIS::MouseEvent &e)
 
 void PlayState::_setLights(void)
 {
-    mSceneMgr->setAmbientLight(ColourValue(0.7f, 0.7f, 0.7f));
+    mSceneMgr->setAmbientLight(ColourValue(1.0f, 1.0f, 1.0f));
     mSceneMgr->setShadowTechnique(SHADOWTYPE_STENCIL_ADDITIVE);
 
     mLightD = mSceneMgr->createLight("LightD");
     mLightD->setType(Light::LT_DIRECTIONAL);
     mLightD->setDirection(Vector3(1.0f, -2.0f, -1.0f));
-    mLightD->setVisible(true);
+    mLightD->setVisible(false);
 }
 
 void PlayState::_drawGroundPlane(void)
@@ -320,6 +337,87 @@ void PlayState::_drawGroundPlane(void)
     mSceneMgr->getRootSceneNode()->createChildSceneNode("VictoryZone", Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500))->attachObject(groundEntity);
     groundEntity->setMaterialName("KPU_LOGO");
     groundEntity->setCastShadows(false);
+
+    Plane SkyBack(Vector3::NEGATIVE_UNIT_Z, 0);
+    MeshManager::getSingleton().createPlane(
+        "SkyBack",
+        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        SkyBack,
+        10000, 10000,
+        1, 1,
+        true, 1, 1, 1,
+        Vector3::UNIT_Y
+    );
+
+    Entity* SkyBackEntity = mSceneMgr->createEntity("SkyBack", "SkyBack");
+    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, 5000.0f))->attachObject(SkyBackEntity);
+    SkyBackEntity->setMaterialName("SkyBox_Back");
+    SkyBackEntity->setCastShadows(false);
+
+    Plane SkyFront(Vector3::UNIT_Z, 0);
+    MeshManager::getSingleton().createPlane(
+        "SkyFront",
+        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        SkyFront,
+        10000, 10000,
+        1, 1,
+        true, 1, 1, 1,
+        Vector3::UNIT_Y
+    );
+
+    Entity* SkyFrontEntity = mSceneMgr->createEntity("SkyFront", "SkyFront");
+    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, -5000.0f))->attachObject(SkyFrontEntity);
+    SkyFrontEntity->setMaterialName("SkyBox_Front");
+    SkyFrontEntity->setCastShadows(false);
+
+    Plane SkyLeft(Vector3::UNIT_X, 0);
+    MeshManager::getSingleton().createPlane(
+        "SkyLeft",
+        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        SkyLeft,
+        10000, 10000,
+        1, 1,
+        true, 1, 1, 1,
+        Vector3::UNIT_Y
+    );
+
+    Entity* SkyLeftEntity = mSceneMgr->createEntity("SkyLeft", "SkyLeft");
+    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(-5000.0f, 0.0f, 0.0f))->attachObject(SkyLeftEntity);
+    SkyLeftEntity->setMaterialName("SkyBox_Left");
+    SkyLeftEntity->setCastShadows(false);
+
+    Plane SkyRight(Vector3::NEGATIVE_UNIT_X, 0);
+    MeshManager::getSingleton().createPlane(
+        "SkyRight",
+        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        SkyRight,
+        10000, 10000,
+        1, 1,
+        true, 1, 1, 1,
+        Vector3::UNIT_Y
+    );
+
+    Entity* SkyRightEntity = mSceneMgr->createEntity("SkyRight", "SkyRight");
+    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(5000.0f, 0.0f, 0.0f))->attachObject(SkyRightEntity);
+    SkyRightEntity->setMaterialName("SkyBox_Right");
+    SkyRightEntity->setCastShadows(false);
+
+    Plane SkyTop(Vector3::NEGATIVE_UNIT_Y, 0);
+    MeshManager::getSingleton().createPlane(
+        "SkyTop",
+        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        SkyTop,
+        10000, 10000,
+        1, 1,
+        true, 1, 1, 1,
+        Vector3::UNIT_Z
+    );
+
+    Entity* SkyTopEntity = mSceneMgr->createEntity("SkyTop", "SkyTop");
+    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 5000.0f, 0.0f))->attachObject(SkyTopEntity);
+    SkyTopEntity->setMaterialName("SkyBox_Top");
+    SkyTopEntity->setCastShadows(false);
+    SkyTopEntity->setCastShadows(false);
 }
 
 void PlayState::_drawGridPlane(void)

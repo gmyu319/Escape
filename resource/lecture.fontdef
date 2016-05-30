@@ -1,9 +1,0 @@
-Font/NanumBold18
-{
-	type 		truetype
-	source		NanumBold.ttf
-	size 		18
-	resolution 	96
-	code_points	33-167 4352-4607 12592-12687 44032-55203
-}
-
