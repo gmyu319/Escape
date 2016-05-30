@@ -64,6 +64,8 @@ void GameManager::init(void)
     pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
     mInputManager = OIS::InputManager::createInputSystem(pl);
 
+    ShowCursor(false);
+
     mKeyboard = static_cast<OIS::Keyboard*>(mInputManager->createInputObject(OIS::OISKeyboard, true));
     mMouse = static_cast<OIS::Mouse*>(mInputManager->createInputObject(OIS::OISMouse, true));
 

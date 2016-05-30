@@ -8,8 +8,8 @@
 
 using namespace std;
 
-#define WALKING_SPEED 200.0f
-#define RUNNING_SPEED 400.0f
+#define WALKING_SPEED 500.0f
+#define RUNNING_SPEED 1000.0f
 
 class PlayState : public GameState
 {

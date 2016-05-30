@@ -24,14 +24,13 @@ void PlayState::enter(void)
     mCharacterRoot = mSceneMgr->getRootSceneNode()->createChildSceneNode("ProfessorRoot");
     mCharacterYaw = mCharacterRoot->createChildSceneNode("ProfessorYaw");
 
-    mCameraYaw = mCharacterRoot->createChildSceneNode("CameraYaw", Vector3(0.0f, 120.0f, 0.0f));
+    mCameraYaw = mCharacterRoot->createChildSceneNode("CameraYaw", Vector3(0.0f, 240.0f, 0.0f));
     mCameraPitch = mCameraYaw->createChildSceneNode("CameraPitch");
-    mCameraHolder = mCameraPitch->createChildSceneNode("CameraHolder", Vector3(0.0f, 80.0f, 500.0f));
+    mCameraHolder = mCameraPitch->createChildSceneNode("CameraHolder", Vector3(0.0f, 0.0f, -480.0f));
+
+    mCameraYaw->setInheritOrientation(false);
 
     mCharacterEntity = mSceneMgr->createEntity("Professor", "DustinBody.mesh");
-
-    Quaternion quat = Ogre::Vector3(Vector3::UNIT_Z).getRotationTo(Vector3::NEGATIVE_UNIT_Z);
-    mCharacterYaw->setOrientation(quat);
 
     mCharacterYaw->attachObject(mCharacterEntity);
     mCharacterEntity->setCastShadows(true);
@@ -51,6 +50,9 @@ void PlayState::exit(void)
 {
     mSceneMgr->clearScene();
     mInformationOverlay->hide();
+
+    mPlayerAnimationState = "";
+    mAnimationStates.clear();
 }
 
 void PlayState::pause(void)
@@ -63,20 +65,24 @@ void PlayState::resume(void)
 
 bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 {
+    mCharacterRoot->setOrientation(mCameraYaw->getOrientation());
+
     if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) {
         if (RUNNING_SPEED == mPlayerSpeed)
             mPlayerAnimationState = "Run";
         else
             mPlayerAnimationState = "Walk";
 
-        mCharacterRoot->translate(mPlayerDir.normalisedCopy() * mPlayerSpeed * evt.timeSinceLastFrame);
+        mCharacterRoot->translate(mPlayerDir.normalisedCopy() * mPlayerSpeed * evt.timeSinceLastFrame, Node::TransformSpace::TS_LOCAL);
+
+        Quaternion quat = Vector3(Vector3::UNIT_Z).getRotationTo(mPlayerDir.normalisedCopy());
+        mCharacterYaw->setOrientation(quat);
     }
     else {
         mPlayerAnimationState = "Idle";
     }
 
-    for (auto as : mAnimationStates)
-    {
+    for (auto as : mAnimationStates) {
         if (mPlayerAnimationState == as.first) {
             as.second->addTime(evt.timeSinceLastFrame);
             as.second->setLoop(true);
@@ -116,10 +122,10 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
 bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
 {
-    if (OIS::KC_W == e.key) mPlayerDir.z += 1.0f;
-    if (OIS::KC_S == e.key) mPlayerDir.z += -1.0f;
-    if (OIS::KC_A == e.key) mPlayerDir.x += 1.0f;
-    if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
+    if (OIS::KC_W == e.key) mPlayerDir.z += -1.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z += 1.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = WALKING_SPEED;
 
     return true;
@@ -127,10 +133,10 @@ bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
 
 bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
 {
-    if (OIS::KC_W == e.key) mPlayerDir.z += -1.0f;
-    if (OIS::KC_S == e.key) mPlayerDir.z += 1.0f;
-    if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
-    if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
+    if (OIS::KC_W == e.key) mPlayerDir.z += 1.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z += -1.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x += 1.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
 
     switch (e.key)
@@ -145,21 +151,26 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
 
 bool PlayState::mousePressed(GameManager* game, const OIS::MouseEvent &e, OIS::MouseButtonID id)
 {
+    if (e.state.buttonDown(OIS::MB_Right))
+        mCamera->setFOVy(Degree(20.0f));
+
     return true;
 }
 
 bool PlayState::mouseReleased(GameManager* game, const OIS::MouseEvent &e, OIS::MouseButtonID id)
 {
+    if (!e.state.buttonDown(OIS::MB_Right))
+        mCamera->setFOVy(Degree(45.0f));
+
     return true;
 }
 
 
 bool PlayState::mouseMoved(GameManager* game, const OIS::MouseEvent &e)
 {
-    //mCameraYaw->yaw(Degree(-e.state.X.rel));
-    //mCameraPitch->pitch(Degree(-e.state.Y.rel));
+    SetCursorPos(960.0f, 540.0f);
 
-    //mCameraHolder->translate(Ogre::Vector3(0, 0, -e.state.Z.rel * 0.1f));
+    mCameraYaw->yaw(Degree(-e.state.X.rel * 0.1f));
     return true;
 }
 
@@ -213,13 +224,13 @@ void PlayState::_drawGridPlane(void)
     gridPlaneMaterial->getTechnique(0)->getPass(0)->setSelfIllumination(1, 1, 1);
 
     gridPlane->begin("GridPlaneMaterial", Ogre::RenderOperation::OT_LINE_LIST);
-    for (int i = 0; i < 21; i++)
+    for (int i = 0; i < 21; ++i)
     {
-        gridPlane->position(-500.0f, 0.0f, 500.0f - i * 50);
-        gridPlane->position(500.0f, 0.0f, 500.0f - i * 50);
+        gridPlane->position(-5000.0f, 0.0f, 5000.0f - i * 500.0f);
+        gridPlane->position(5000.0f, 0.0f, 5000.0f - i * 500.0f);
 
-        gridPlane->position(-500.f + i * 50, 0.f, 500.0f);
-        gridPlane->position(-500.f + i * 50, 0.f, -500.f);
+        gridPlane->position(-5000.0f + i * 500.0f, 0.0f, 5000.0f);
+        gridPlane->position(-5000.0f + i * 500.0f, 0.0f, -5000.0f);
     }
 
     gridPlane->end();
