@@ -46,6 +46,16 @@ void PlayState::enter(void)
         mBulletNode[i]->setScale(Vector3(20.0f, 20.0f, 20.0f));
     }
 
+    string zombie = "Zombie";
+    for (int i = 0; i < NUM_OF_NPC; ++i) {
+        mZombieEntity[i] = mSceneMgr->createEntity(zombie + to_string(i), "zombie.mesh");
+        mZombieNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(zombie + "Node" + to_string(i));
+        mZombieNode[i]->attachObject(mZombieEntity[i]);
+        mZombieNode[i]->setPosition(Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500));
+        mZombieNode[i]->setScale(Vector3(2.0f, 2.0f, 2.0f));
+        mZombieTargetPoint[i] = Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500);
+    }
+
     mCharacterYaw->attachObject(mCharacterEntity);
     mCharacterEntity->setCastShadows(true);
 
@@ -120,7 +130,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         mCharacterRoot->setPosition(mCharacterRoot->getPosition().x, 0.0f, mCharacterRoot->getPosition().z);
 
     Ogre::Matrix3 mtx;
-    mCameraYaw->_getFullTransform().extract3x3Matrix(mtx);
+    mCameraHolder->_getFullTransform().extract3x3Matrix(mtx);
     Vector3 vec = mtx.GetColumn(2);
 
     // fire
@@ -133,10 +143,12 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
             sumDeltaTime = 0.0f;
         }
 
-        Vector3 vec2;
+        Vector3 vec2, vec3;
         mCharacterRoot->_getFullTransform().extract3x3Matrix(mtx);
         vec2 = mtx.GetColumn(2);
-        Quaternion quat = Vector3(vec2).getRotationTo(vec);
+        mCameraYaw->_getFullTransform().extract3x3Matrix(mtx);
+        vec3 = mtx.GetColumn(2);
+        Quaternion quat = Vector3(vec2).getRotationTo(vec3);
         mCharacterYaw->setOrientation(quat);
     }
 
@@ -169,6 +181,16 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         }
     }
 
+    // zombie update
+    for (int i = 0; i < NUM_OF_NPC; ++i) {
+        Vector3 dir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
+        mZombieNode[i]->translate(dir * ZOMBIE_SPEED * evt.timeSinceLastFrame);
+        if((mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalise() < 20.0f) 
+            mZombieTargetPoint[i] = Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500);
+    }
+        
+
+    // victory
     Vector3 victoryZonePos = mSceneMgr->getSceneNode("VictoryZone")->getPosition();
     if (mCharacterRoot->getPosition().x <= victoryZonePos.x + 250.0f && mCharacterRoot->getPosition().x >= victoryZonePos.x - 250.0f
         && mCharacterRoot->getPosition().z <= victoryZonePos.z + 250.0f && mCharacterRoot->getPosition().z >= victoryZonePos.z - 250.0f)
@@ -204,10 +226,10 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
 bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
 {
-    if (OIS::KC_W == e.key) mPlayerDir.z = 0.0f;
-    if (OIS::KC_S == e.key) mPlayerDir.z = 0.0f;
-    if (OIS::KC_A == e.key) mPlayerDir.x = 0.0f;
-    if (OIS::KC_D == e.key) mPlayerDir.x = 0.0f;
+    if (OIS::KC_W == e.key) mPlayerDir.z += -1.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z += 1.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = WALKING_SPEED;
 
     return true;
@@ -256,9 +278,15 @@ bool PlayState::mouseReleased(GameManager* game, const OIS::MouseEvent &e, OIS::
 
 bool PlayState::mouseMoved(GameManager* game, const OIS::MouseEvent &e)
 {
+    static float accumulatedPitch = 0.0f;
     SetCursorPos(960.0f, 540.0f);
 
     mCameraYaw->yaw(Degree(-e.state.X.rel * 0.1f));
+    accumulatedPitch += e.state.Y.rel * 0.1f;
+    if (accumulatedPitch >= 90.0f) { accumulatedPitch = 90.0f; }
+    else if (accumulatedPitch <= -90.0f) { accumulatedPitch = -90.0f; }
+    else mCameraPitch->pitch(Degree(e.state.Y.rel * 0.1f));
+
     return true;
 }
 

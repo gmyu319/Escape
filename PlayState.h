@@ -11,7 +11,9 @@ using namespace std;
 
 #define WALKING_SPEED 800.0f
 #define RUNNING_SPEED 1600.0f
+#define ZOMBIE_SPEED 400.0f
 #define MAX_BULLET 30
+#define NUM_OF_NPC 100
 
 class PlayState : public GameState
 {
@@ -58,6 +60,10 @@ private:
 
     Ogre::SceneNode* mBulletNode[MAX_BULLET];
     Ogre::Entity* mBulletEntity[MAX_BULLET];
+
+    Ogre::SceneNode* mZombieNode[NUM_OF_NPC];
+    Ogre::Entity* mZombieEntity[NUM_OF_NPC];
+    Ogre::Vector3 mZombieTargetPoint[NUM_OF_NPC];
 
     std::vector<pair<string, Ogre::AnimationState*>> mAnimationStates;
 
