@@ -1,6 +1,8 @@
 #include "PlayState.h"
 #include "TitleState.h"
 
+#include "time.h"
+
 using namespace Ogre;
 
 PlayState PlayState::mPlayState;
@@ -9,6 +11,8 @@ bool g_bBulletMark[MAX_BULLET];
 
 void PlayState::enter(void)
 {
+    srand(time(nullptr));
+
     mRoot = Root::getSingletonPtr();
     mRoot->getAutoCreatedWindow()->resetStatistics();
 
@@ -40,7 +44,6 @@ void PlayState::enter(void)
         mBulletNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(fish + "Node" + to_string(i));
         mBulletNode[i]->attachObject(mBulletEntity[i]);
         mBulletNode[i]->setScale(Vector3(20.0f, 20.0f, 20.0f));
-        mBulletNode[i]->yaw(Degree(-90.0f));
     }
 
     mCharacterYaw->attachObject(mCharacterEntity);
@@ -52,7 +55,7 @@ void PlayState::enter(void)
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Idle", mCharacterEntity->getAnimationState("Idle")));
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Walk", mCharacterEntity->getAnimationState("Walk")));
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Run", mCharacterEntity->getAnimationState("Run")));
-    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Jumping", mCharacterEntity->getAnimationState("Jumping")));
+    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Throw", mCharacterEntity->getAnimationState("Throw")));
 
     mPlayerDir = Vector3(0.0f, 0.0f, 0.0f);
     mPlayerJump = Vector3(0.0f, 0.0f, 0.0f);
@@ -85,12 +88,20 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
     mCharacterRoot->setOrientation(mCameraYaw->getOrientation());
 
     if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) { // move
-        if (RUNNING_SPEED == mPlayerSpeed)
-            mPlayerAnimationState = "Run";
-        else
-            mPlayerAnimationState = "Walk";
+        if (!g_bLeftButtonDown) {
+            if (RUNNING_SPEED == mPlayerSpeed)
+                mPlayerAnimationState = "Run";
+            else
+                mPlayerAnimationState = "Walk";
+        }
 
         mCharacterRoot->translate(mPlayerDir.normalisedCopy() * mPlayerSpeed * evt.timeSinceLastFrame, Node::TransformSpace::TS_LOCAL);
+        Ogre::Vector3 playerPos = mCharacterRoot->getPosition();
+        if (playerPos.x < -5000.0f)  playerPos.x = -5000.0f;
+        if (playerPos.x > 5000.0f)  playerPos.x = 5000.0f;
+        if (playerPos.z < -5000.0f)  playerPos.z = -5000.0f;
+        if (playerPos.z > 5000.0f)  playerPos.z = 5000.0f;
+        mCharacterRoot->setPosition(playerPos);
 
         Vector3 dir = mPlayerDir.normalisedCopy();
         dir.y = 0.0f;
@@ -98,11 +109,12 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         mCharacterYaw->setOrientation(quat);
     }
     else { // idle
-        mPlayerAnimationState = "Idle";
+        if (!g_bLeftButtonDown)
+            mPlayerAnimationState = "Idle";
     }
 
     // jump
-    mPlayerJump += gravity * evt.timeSinceLastFrame * 4.0f;
+    mPlayerJump += gravity * evt.timeSinceLastFrame * 3.0f;
     mCharacterRoot->translate(mPlayerJump, Node::TransformSpace::TS_WORLD);
     if (mCharacterRoot->getPosition().y < 0.0f)
         mCharacterRoot->setPosition(mCharacterRoot->getPosition().x, 0.0f, mCharacterRoot->getPosition().z);
@@ -113,6 +125,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 
     // fire
     if(g_bLeftButtonDown) {
+        mPlayerAnimationState = "Throw";
         sumDeltaTime += evt.timeSinceLastFrame;
         if (sumDeltaTime >= mFireSpeed) {
             mPlayerBullet.Add(mCharacterRoot->getPosition().x, mCharacterRoot->getPosition().y + 140.0f, 
@@ -156,6 +169,13 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         }
     }
 
+    Vector3 victoryZonePos = mSceneMgr->getSceneNode("VictoryZone")->getPosition();
+    if (mCharacterRoot->getPosition().x <= victoryZonePos.x + 250.0f && mCharacterRoot->getPosition().x >= victoryZonePos.x - 250.0f
+        && mCharacterRoot->getPosition().z <= victoryZonePos.z + 250.0f && mCharacterRoot->getPosition().z >= victoryZonePos.z - 250.0f)
+    {
+        game->changeState(TitleState::getInstance());
+    }
+
     return true;
 }
 
@@ -184,10 +204,10 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
 bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
 {
-    if (OIS::KC_W == e.key) mPlayerDir.z += -1.0f;
-    if (OIS::KC_S == e.key) mPlayerDir.z += 1.0f;
-    if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
-    if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
+    if (OIS::KC_W == e.key) mPlayerDir.z = 0.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z = 0.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x = 0.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x = 0.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = WALKING_SPEED;
 
     return true;
@@ -200,7 +220,7 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
     if (OIS::KC_A == e.key) mPlayerDir.x += 1.0f;
     if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
-    if (OIS::KC_SPACE == e.key) if(mCharacterRoot->getPosition().y == 0.0f) mPlayerJump = Vector3(0.0f, 19.6f, 0.0f);
+    if (OIS::KC_SPACE == e.key) if(mCharacterRoot->getPosition().y == 0.0f) mPlayerJump = Vector3(0.0f, 9.8f, 0.0f);
     if (OIS::KC_R == e.key) mPlayerBullet.Init();
 
     switch (e.key)
@@ -269,7 +289,7 @@ void PlayState::_drawGroundPlane(void)
     );
 
     Entity* groundEntity = mSceneMgr->createEntity("GroundPlane", "Ground");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(groundEntity);
+    mSceneMgr->getRootSceneNode()->createChildSceneNode("VictoryZone", Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500))->attachObject(groundEntity);
     groundEntity->setMaterialName("KPU_LOGO");
     groundEntity->setCastShadows(false);
 }
