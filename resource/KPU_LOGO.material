@@ -1,0 +1,29 @@
+material KPU_LOGO
+{
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				scroll_anim 0 -4
+				texture KPU_LOGO.gif
+			}
+		}
+	}
+}
+
+material KPU_LOGO2
+{
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				texture KPU_LOGO.gif
+			}
+		}
+	}
+}
+

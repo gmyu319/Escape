@@ -2,6 +2,15 @@
 
 #include "GameState.h"
 
+#include <iostream>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+#define WALKING_SPEED 200.0f
+#define RUNNING_SPEED 400.0f
+
 class PlayState : public GameState
 {
 public:
@@ -45,7 +54,11 @@ private:
 
   Ogre::Entity* mCharacterEntity;
 
-  Ogre::AnimationState* mAnimationState;
+  std::vector<pair<string, Ogre::AnimationState*>> mAnimationStates;
 
-  Ogre::Overlay*           mInformationOverlay;
+  Ogre::Overlay* mInformationOverlay;
+
+  Ogre::Vector3 mPlayerDir;
+  float mPlayerSpeed = WALKING_SPEED;
+  string mPlayerAnimationState;
 };

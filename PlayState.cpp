@@ -29,15 +29,22 @@ void PlayState::enter(void)
     mCameraHolder = mCameraPitch->createChildSceneNode("CameraHolder", Vector3(0.0f, 80.0f, 500.0f));
 
     mCharacterEntity = mSceneMgr->createEntity("Professor", "DustinBody.mesh");
+
+    Quaternion quat = Ogre::Vector3(Vector3::UNIT_Z).getRotationTo(Vector3::NEGATIVE_UNIT_Z);
+    mCharacterYaw->setOrientation(quat);
+
     mCharacterYaw->attachObject(mCharacterEntity);
     mCharacterEntity->setCastShadows(true);
 
     mCameraHolder->attachObject(mCamera);
     mCamera->lookAt(mCameraYaw->getPosition());
 
-    mAnimationState = mCharacterEntity->getAnimationState("Run");
-    mAnimationState->setLoop(true);
-    mAnimationState->setEnabled(true);
+    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Idle", mCharacterEntity->getAnimationState("Idle")));
+    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Walk", mCharacterEntity->getAnimationState("Walk")));
+    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Run", mCharacterEntity->getAnimationState("Run")));
+
+    mPlayerDir = Vector3(0.0f, 0.0f, 0.0f);
+    mPlayerAnimationState = "Idle";
 }
 
 void PlayState::exit(void)
@@ -56,7 +63,30 @@ void PlayState::resume(void)
 
 bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 {
-    mAnimationState->addTime(evt.timeSinceLastFrame);
+    if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) {
+        if (RUNNING_SPEED == mPlayerSpeed)
+            mPlayerAnimationState = "Run";
+        else
+            mPlayerAnimationState = "Walk";
+
+        mCharacterRoot->translate(mPlayerDir.normalisedCopy() * mPlayerSpeed * evt.timeSinceLastFrame);
+    }
+    else {
+        mPlayerAnimationState = "Idle";
+    }
+
+    for (auto as : mAnimationStates)
+    {
+        if (mPlayerAnimationState == as.first) {
+            as.second->addTime(evt.timeSinceLastFrame);
+            as.second->setLoop(true);
+            as.second->setEnabled(true);
+        }
+        else {
+            as.second->setLoop(false);
+            as.second->setEnabled(false);
+        }
+    }
 
     return true;
 }
@@ -86,16 +116,25 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
 bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
 {
+    if (OIS::KC_W == e.key) mPlayerDir.z += 1.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z += -1.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x += 1.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
+    if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = WALKING_SPEED;
+
     return true;
 }
 
 bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
 {
+    if (OIS::KC_W == e.key) mPlayerDir.z += -1.0f;
+    if (OIS::KC_S == e.key) mPlayerDir.z += 1.0f;
+    if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
+    if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
+    if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
+
     switch (e.key)
     {
-    case OIS::KC_W:
-
-        break;
     case OIS::KC_ESCAPE:
         game->changeState(TitleState::getInstance());
         break;
