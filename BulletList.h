@@ -10,8 +10,8 @@ struct POSITION
 class CNode
 {
 public:
-    const int bulletSpeed = 6000.0f;
-    float mLifeTime = 1.0f;
+    const int bulletSpeed = 10000.0f;
+    float mLifeTime = 3.0f;
     POSITION mPos;
     POSITION mDir;
     int mKey;

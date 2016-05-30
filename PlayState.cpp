@@ -4,6 +4,8 @@
 using namespace Ogre;
 
 PlayState PlayState::mPlayState;
+bool g_bLeftButtonDown = false;
+bool g_bBulletMark[MAX_BULLET];
 
 void PlayState::enter(void)
 {
@@ -32,6 +34,15 @@ void PlayState::enter(void)
 
     mCharacterEntity = mSceneMgr->createEntity("Professor", "DustinBody.mesh");
 
+    string fish = "Fish";
+    for (int i = 0; i < MAX_BULLET; ++i) {
+        mBulletEntity[i] = mSceneMgr->createEntity(fish + to_string(i), "fish.mesh");
+        mBulletNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(fish + "Node" + to_string(i));
+        mBulletNode[i]->attachObject(mBulletEntity[i]);
+        mBulletNode[i]->setScale(Vector3(20.0f, 20.0f, 20.0f));
+        mBulletNode[i]->yaw(Degree(-90.0f));
+    }
+
     mCharacterYaw->attachObject(mCharacterEntity);
     mCharacterEntity->setCastShadows(true);
 
@@ -41,9 +52,13 @@ void PlayState::enter(void)
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Idle", mCharacterEntity->getAnimationState("Idle")));
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Walk", mCharacterEntity->getAnimationState("Walk")));
     mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Run", mCharacterEntity->getAnimationState("Run")));
+    mAnimationStates.push_back(make_pair<string, Ogre::AnimationState*>("Jumping", mCharacterEntity->getAnimationState("Jumping")));
 
     mPlayerDir = Vector3(0.0f, 0.0f, 0.0f);
+    mPlayerJump = Vector3(0.0f, 0.0f, 0.0f);
     mPlayerAnimationState = "Idle";
+
+    mPlayerBullet.Init();
 }
 
 void PlayState::exit(void)
@@ -65,9 +80,11 @@ void PlayState::resume(void)
 
 bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 {
+    static Vector3 gravity = Vector3(0.0f, -9.8f, 0.0f);
+    static float sumDeltaTime = 0.0;
     mCharacterRoot->setOrientation(mCameraYaw->getOrientation());
 
-    if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) {
+    if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) { // move
         if (RUNNING_SPEED == mPlayerSpeed)
             mPlayerAnimationState = "Run";
         else
@@ -75,13 +92,58 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 
         mCharacterRoot->translate(mPlayerDir.normalisedCopy() * mPlayerSpeed * evt.timeSinceLastFrame, Node::TransformSpace::TS_LOCAL);
 
-        Quaternion quat = Vector3(Vector3::UNIT_Z).getRotationTo(mPlayerDir.normalisedCopy());
+        Vector3 dir = mPlayerDir.normalisedCopy();
+        dir.y = 0.0f;
+        Quaternion quat = Vector3(Vector3::UNIT_Z).getRotationTo(dir);
         mCharacterYaw->setOrientation(quat);
     }
-    else {
+    else { // idle
         mPlayerAnimationState = "Idle";
     }
 
+    // jump
+    mPlayerJump += gravity * evt.timeSinceLastFrame * 4.0f;
+    mCharacterRoot->translate(mPlayerJump, Node::TransformSpace::TS_WORLD);
+    if (mCharacterRoot->getPosition().y < 0.0f)
+        mCharacterRoot->setPosition(mCharacterRoot->getPosition().x, 0.0f, mCharacterRoot->getPosition().z);
+
+    Ogre::Matrix3 mtx;
+    mCameraYaw->_getFullTransform().extract3x3Matrix(mtx);
+    Vector3 vec = mtx.GetColumn(2);
+
+    // fire
+    if(g_bLeftButtonDown) {
+        sumDeltaTime += evt.timeSinceLastFrame;
+        if (sumDeltaTime >= mFireSpeed) {
+            mPlayerBullet.Add(mCharacterRoot->getPosition().x, mCharacterRoot->getPosition().y + 140.0f, 
+                mCharacterRoot->getPosition().z, vec.x, vec.y, vec.z);
+            sumDeltaTime = 0.0f;
+        }
+
+        Vector3 vec2;
+        mCharacterRoot->_getFullTransform().extract3x3Matrix(mtx);
+        vec2 = mtx.GetColumn(2);
+        Quaternion quat = Vector3(vec2).getRotationTo(vec);
+        mCharacterYaw->setOrientation(quat);
+    }
+
+    // bullet update
+    mPlayerBullet.Update(evt.timeSinceLastFrame);
+    CNode *start = mPlayerBullet.getHead()->m_next;
+    CNode *end = mPlayerBullet.getTail();
+
+    for (int i = 0; i < MAX_BULLET; ++i) g_bBulletMark[i] = false;
+    while (start != end) {
+        mBulletNode[start->getKey()]->setPosition(Vector3(start->mPos.x, start->mPos.y, start->mPos.z));
+        g_bBulletMark[start->getKey()] = true;
+        start = start->m_next;
+    }
+    for (int i = 0; i < MAX_BULLET; ++i) {
+        if (g_bBulletMark[i]) continue;
+        mBulletNode[i]->setPosition(Vector3(-9999.0f, -9999.0f, -9999.0f));
+    }
+
+    // animation update
     for (auto as : mAnimationStates) {
         if (mPlayerAnimationState == as.first) {
             as.second->addTime(evt.timeSinceLastFrame);
@@ -138,6 +200,8 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
     if (OIS::KC_A == e.key) mPlayerDir.x += 1.0f;
     if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
+    if (OIS::KC_SPACE == e.key) if(mCharacterRoot->getPosition().y == 0.0f) mPlayerJump = Vector3(0.0f, 19.6f, 0.0f);
+    if (OIS::KC_R == e.key) mPlayerBullet.Init();
 
     switch (e.key)
     {
@@ -153,6 +217,8 @@ bool PlayState::mousePressed(GameManager* game, const OIS::MouseEvent &e, OIS::M
 {
     if (e.state.buttonDown(OIS::MB_Right))
         mCamera->setFOVy(Degree(20.0f));
+    if (e.state.buttonDown(OIS::MB_Left))
+        g_bLeftButtonDown = true;
 
     return true;
 }
@@ -161,6 +227,8 @@ bool PlayState::mouseReleased(GameManager* game, const OIS::MouseEvent &e, OIS::
 {
     if (!e.state.buttonDown(OIS::MB_Right))
         mCamera->setFOVy(Degree(45.0f));
+    if (!e.state.buttonDown(OIS::MB_Left))
+        g_bLeftButtonDown = false;
 
     return true;
 }
