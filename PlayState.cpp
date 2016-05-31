@@ -248,6 +248,12 @@ bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
     if (OIS::KC_A == e.key) mPlayerDir.x += -1.0f;
     if (OIS::KC_D == e.key) mPlayerDir.x += 1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = WALKING_SPEED;
+    if (OIS::KC_Q == e.key) {
+        for (int i = 0; i < MAX_BULLET; ++i)
+            mBulletNode[i]->showBoundingBox(false);
+        for (int j = 0; j < NUM_OF_NPC; ++j)
+            mZombieNode[j]->showBoundingBox(false);
+    }
 
     return true;
 }
@@ -261,6 +267,12 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
     if (OIS::KC_SPACE == e.key) if(mCharacterRoot->getPosition().y == 0.0f) mPlayerJump = Vector3(0.0f, 9.8f, 0.0f);
     if (OIS::KC_R == e.key) mPlayerBullet.Init();
+    if (OIS::KC_Q == e.key) {
+        for (int i = 0; i < MAX_BULLET; ++i)
+            mBulletNode[i]->showBoundingBox(true);
+        for (int j = 0; j < NUM_OF_NPC; ++j)
+            mZombieNode[j]->showBoundingBox(true);
+    }
 
     switch (e.key)
     {
