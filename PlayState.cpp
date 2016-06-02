@@ -51,7 +51,10 @@ void PlayState::enter(void)
 
     string zombie = "Zombie";
     for (int i = 0; i < NUM_OF_NPC; ++i) {
-        mZombieEntity[i] = mSceneMgr->createEntity(zombie + to_string(i), "zombie.mesh");
+        mZombieEntity[i] = mSceneMgr->createEntity(zombie + to_string(i), "jungletex.mesh");
+        mZombieAnimationState[i] = mZombieEntity[i]->getAnimationState("BaseFBXFileAnim");
+        mZombieAnimationState[i]->setEnabled(true);
+        mZombieAnimationState[i]->setLoop(true);
         mZombieNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(zombie + "Node" + to_string(i));
         mZombieNode[i]->attachObject(mZombieEntity[i]);
         mZombieNode[i]->setPosition(Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500));
@@ -200,6 +203,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 
     // zombie update
     for (int i = 0; i < NUM_OF_NPC; ++i) {
+        mZombieAnimationState[i]->addTime(evt.timeSinceLastFrame);
         Vector3 dir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
         mZombieNode[i]->translate(dir * ZOMBIE_SPEED * evt.timeSinceLastFrame);
         if((mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalise() < 20.0f) 

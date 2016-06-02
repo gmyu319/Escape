@@ -65,6 +65,8 @@ private:
     Ogre::Entity* mZombieEntity[NUM_OF_NPC];
     Ogre::Vector3 mZombieTargetPoint[NUM_OF_NPC];
 
+    Ogre::AnimationState *mZombieAnimationState[NUM_OF_NPC];
+
     std::vector<pair<string, Ogre::AnimationState*>> mAnimationStates;
 
     Ogre::Overlay* mInformationOverlay;
