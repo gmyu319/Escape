@@ -13,7 +13,7 @@ using namespace std;
 #define RUNNING_SPEED 1000.0f
 #define ZOMBIE_SPEED 600.0f
 #define MAX_BULLET 30
-#define NUM_OF_NPC 500
+#define NUM_OF_NPC 300
 
 class PlayState : public GameState
 {

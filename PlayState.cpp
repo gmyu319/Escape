@@ -412,6 +412,10 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
         for (int j = 0; j < NUM_OF_NPC; ++j)
             mZombieNode[j]->showBoundingBox(true);
     }
+    if (OIS::KC_V == e.key) {
+        mPlayerHp = 10000;
+        mPlayerMp = 10000;
+    }
     switch (e.key)
     {
     case OIS::KC_ESCAPE:
