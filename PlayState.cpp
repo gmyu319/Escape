@@ -99,6 +99,22 @@ void PlayState::enter(void)
         mHpContainer->addChild(mHpTextBox);
         mHpOverlay->add2D(mHpContainer);
 
+        // hp
+        mMpOverlay = pOverlayMgr->create("MpOverlay");
+        mMpContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container3"));
+        mMpContainer->setDimensions(1, 1);
+        mMpContainer->setPosition(0.0f, 0.0f);
+
+        mMpTextBox = pOverlayMgr->createOverlayElement("TextArea", "MpText");
+        mMpTextBox->setMetricsMode(Ogre::GMM_PIXELS);
+        mMpTextBox->setPosition(10, 40);
+        mMpTextBox->setParameter("font_name", "Font/NanumBold18");
+        mMpTextBox->setParameter("char_height", "30");
+        mMpTextBox->setColour(Ogre::ColourValue(0.0f, 1.0f, 1.0f, 1.0f));
+
+        mMpContainer->addChild(mMpTextBox);
+        mMpOverlay->add2D(mMpContainer);
+
         // Åº¾Ë
         mBulletOverlay = pOverlayMgr->create("BulletOverlay");
         mBulletContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container2"));
@@ -107,10 +123,10 @@ void PlayState::enter(void)
 
         mBulletTextBox = pOverlayMgr->createOverlayElement("TextArea", "BulletText");
         mBulletTextBox->setMetricsMode(Ogre::GMM_PIXELS);
-        mBulletTextBox->setPosition(10, 40);
+        mBulletTextBox->setPosition(10, 70);
         mBulletTextBox->setParameter("font_name", "Font/NanumBold18");
         mBulletTextBox->setParameter("char_height", "30");
-        mBulletTextBox->setColour(Ogre::ColourValue(0.0f, 1.0f, 1.0f, 1.0f));
+        mBulletTextBox->setColour(Ogre::ColourValue(1.0f, 1.0f, 0.0f, 1.0f));
 
         mBulletContainer->addChild(mBulletTextBox);
         mBulletOverlay->add2D(mBulletContainer);
@@ -119,8 +135,10 @@ void PlayState::enter(void)
     }
 
     mHpOverlay->show();
+    mMpOverlay->show();
     mBulletOverlay->show();
     mPlayerHp = 100;
+    mPlayerMp = 10;
 
     for (int i = 0; i < NUM_OF_NPC; ++i)
         mZombieIsAwakened[i] = true;
@@ -132,6 +150,7 @@ void PlayState::exit(void)
     /*mInformationOverlay->hide();*/
 
     mHpOverlay->hide();
+    mMpOverlay->hide();
     mBulletOverlay->hide();
 
     mPlayerAnimationState = "";
@@ -149,13 +168,24 @@ void PlayState::resume(void)
 bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 {
     static Vector3 gravity = Vector3(0.0f, -9.8f, 0.0f);
-    static float sumDeltaTime = 0.0;
+    static float sumDeltaTime = 0.0f;
+    static float deltaTimeForMp = 0.0f;
     mCharacterRoot->setOrientation(mCameraYaw->getOrientation());
 
     if (Vector3(0.0f, 0.0f, 0.0f) != mPlayerDir) { // move
         if (!g_bLeftButtonDown) {
-            if (RUNNING_SPEED == mPlayerSpeed)
+            if (RUNNING_SPEED == mPlayerSpeed) {
+                deltaTimeForMp += evt.timeSinceLastFrame;
+                if (deltaTimeForMp > 1.0f) {
+                    mPlayerMp -= 1;
+                    if (mPlayerMp < 0) {
+                        mPlayerSpeed = WALKING_SPEED;
+                        mPlayerMp = 0;
+                    }
+                    deltaTimeForMp = 0.0f;
+                }
                 mPlayerAnimationState = "Run";
+            }
             else
                 mPlayerAnimationState = "Walk";
         }
@@ -223,12 +253,14 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         if (g_bBulletMark[i]) continue;
         mBulletNode[i]->setVisible(false);
     }
-
+    
     // collision check
+    static int tempVal = 0;
     for (int i = 0; i < MAX_BULLET; ++i) {
         if (!g_bBulletMark[i]) continue;
         Ogre::AxisAlignedBox bulletBox = mBulletNode[i]->_getWorldAABB();
         for (int j = 0; j < NUM_OF_NPC; ++j) {
+            if (!mZombieIsAwakened[j]) continue;
             Ogre::AxisAlignedBox zombieBox = mZombieNode[j]->_getWorldAABB();
             if (zombieBox.intersects(bulletBox)) {
                 mZombieHp[j] -= rand() % 25 + 25;
@@ -237,6 +269,12 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
                     mZombieNode[j]->setPosition(0.0f, 100000.0f, 0.0f);
                     mZombieIsAwakened[j] = false;
                     j = NUM_OF_NPC;
+                    tempVal++;
+                    if (tempVal > 5) {
+                        if (mPlayerMp < 50)
+                            mPlayerMp += 1;
+                        tempVal = 0;
+                    }
                 }
             }
         }
@@ -326,6 +364,10 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
     wsprintfW(Text, L"Ã¼·Â: %d/100", mPlayerHp);
     mHpTextBox->setCaption(Ogre::DisplayString(Text));
 
+    // mp
+    wsprintfW(Text, L"¸¶³ª: %d/50", mPlayerMp);
+    mMpTextBox->setCaption(Ogre::DisplayString(Text));
+
     // Åº¾Ë
     wsprintfW(Text, L"Åº¾Ë: %d/30", mPlayerBullet.getCount());
     mBulletTextBox->setCaption(Ogre::DisplayString(Text));
@@ -358,7 +400,12 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
     if (OIS::KC_D == e.key) mPlayerDir.x += -1.0f;
     if (OIS::KC_LSHIFT == e.key) mPlayerSpeed = RUNNING_SPEED;
     if (OIS::KC_SPACE == e.key) if(mCharacterRoot->getPosition().y == 0.0f) mPlayerJump = Vector3(0.0f, 9.8f, 0.0f);
-    if (OIS::KC_R == e.key) mPlayerBullet.Init();
+    if (OIS::KC_R == e.key) {
+        if (mPlayerMp >= 30) {
+            mPlayerBullet.Init();
+            mPlayerMp -= 30;
+        }
+    }
     if (OIS::KC_Q == e.key) {
         for (int i = 0; i < MAX_BULLET; ++i)
             mBulletNode[i]->showBoundingBox(true);

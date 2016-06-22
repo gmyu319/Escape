@@ -9,9 +9,9 @@
 
 using namespace std;
 
-#define WALKING_SPEED 800.0f
-#define RUNNING_SPEED 1600.0f
-#define ZOMBIE_SPEED 400.0f
+#define WALKING_SPEED 400.0f
+#define RUNNING_SPEED 1000.0f
+#define ZOMBIE_SPEED 600.0f
 #define MAX_BULLET 30
 #define NUM_OF_NPC 500
 
@@ -78,6 +78,12 @@ private:
     Ogre::Overlay *mHpOverlay;
     Ogre::OverlayContainer *mHpContainer;
     Ogre::OverlayElement* mHpTextBox;
+
+    // mp
+    int mPlayerMp = 0;
+    Ogre::Overlay *mMpOverlay;
+    Ogre::OverlayContainer *mMpContainer;
+    Ogre::OverlayElement* mMpTextBox;
 
     // Åº¾Ë
     Ogre::Overlay *mBulletOverlay;
