@@ -41,7 +41,7 @@ Overlay/Information
         element TextArea(WorstFps)
         {
             metrics_mode pixels
-            left 605
+            left 635
             top 40
             width 90
             height 30
@@ -54,7 +54,7 @@ Overlay/Information
         element TextArea(BestFps)
         {
             metrics_mode pixels
-            left 605
+            left 635
             top 55
             width 90
             height 30

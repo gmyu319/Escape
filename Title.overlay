@@ -24,8 +24,8 @@ Overlay/Title
       font_name Font/NanumBold18
       char_height 0.05
       caption PRESS SPACE KEY TO START
-      colour_top 1 1 1
-      colour_bottom 1 1 1
+      colour_top 1 0 0
+      colour_bottom 0 0 1
      }
 	}
 }

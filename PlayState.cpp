@@ -53,7 +53,7 @@ void PlayState::enter(void)
     string zombie = "Zombie";
     for (int i = 0; i < NUM_OF_NPC; ++i) {
         mZombieEntity[i] = mSceneMgr->createEntity(zombie + to_string(i), "jungletex.mesh");
-        mZombieAnimationState[i] = mZombieEntity[i]->getAnimationState("BaseFBXFileAnim");
+        mZombieAnimationState[i] = mZombieEntity[i]->getAnimationState("Walk");
         mZombieAnimationState[i]->setEnabled(true);
         mZombieAnimationState[i]->setLoop(true);
         mZombieNode[i] = mSceneMgr->getRootSceneNode()->createChildSceneNode(zombie + "Node" + to_string(i));
@@ -264,15 +264,21 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 
     // zombie update
     for (int i = 0; i < NUM_OF_NPC; ++i) {
-        if (mZombieIsAwakened[i] == false) continue;
-        mZombieAnimationState[i]->addTime(evt.timeSinceLastFrame);
+        mZombieAnimationState[i]->addTime(evt.timeSinceLastFrame + evt.timeSinceLastFrame * ((float)i / NUM_OF_NPC));
         Vector3 dir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
         mZombieNode[i]->translate(dir * ZOMBIE_SPEED * evt.timeSinceLastFrame);
-        if((mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalise() < 20.0f) 
+        if ((mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalise() < 20.0f) {
             mZombieTargetPoint[i] = Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500);
+            Vector3 newDir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
+            Quaternion quat = Vector3::UNIT_Z.getRotationTo(newDir);
+            mZombieNode[i]->setOrientation(quat);
+        }
         if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 1000.0f) {
             mZombieTargetPoint[i] = mCharacterRoot->getPosition();
             mZombieTargetPoint[i].y = 0.0f;
+            Vector3 newDir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
+            Quaternion quat = Vector3::UNIT_Z.getRotationTo(newDir);
+            mZombieNode[i]->setOrientation(quat);
         }
     }
         
@@ -308,11 +314,11 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
     // hp
     wchar_t Text[100];
-    wsprintfW(Text, L"Ã¼·Â: %d", mPlayerHp);
+    wsprintfW(Text, L"Ã¼·Â: %d/100", mPlayerHp);
     mHpTextBox->setCaption(Ogre::DisplayString(Text));
 
     // Åº¾Ë
-    wsprintfW(Text, L"Åº¾Ë: %d", mPlayerBullet.getCount());
+    wsprintfW(Text, L"Åº¾Ë: %d/30", mPlayerBullet.getCount());
     mBulletTextBox->setCaption(Ogre::DisplayString(Text));
 
     return true;
@@ -332,7 +338,6 @@ bool PlayState::keyReleased(GameManager* game, const OIS::KeyEvent &e)
         for (int j = 0; j < NUM_OF_NPC; ++j)
             mZombieNode[j]->showBoundingBox(false);
     }
-
     return true;
 }
 
@@ -351,7 +356,6 @@ bool PlayState::keyPressed(GameManager* game, const OIS::KeyEvent &e)
         for (int j = 0; j < NUM_OF_NPC; ++j)
             mZombieNode[j]->showBoundingBox(true);
     }
-
     switch (e.key)
     {
     case OIS::KC_ESCAPE:
