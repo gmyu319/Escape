@@ -282,6 +282,10 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         }
     }
         
+    // update spot light
+    mLightS->setPosition(mCharacterRoot->getPosition() + Vector3(0.0f, 300.0f, 0.0f));
+    mCameraYaw->_getFullTransform().extract3x3Matrix(mtx);
+    mLightS->setDirection(mtx.GetColumn(2));
 
     // victory
     Vector3 victoryZonePos = mSceneMgr->getSceneNode("VictoryZone")->getPosition();
@@ -290,7 +294,6 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
     {
         game->changeState(TitleState::getInstance());
     }
-
 
     return true;
 }
@@ -405,13 +408,20 @@ bool PlayState::mouseMoved(GameManager* game, const OIS::MouseEvent &e)
 
 void PlayState::_setLights(void)
 {
-    mSceneMgr->setAmbientLight(ColourValue(1.0f, 1.0f, 1.0f));
+    mSceneMgr->setAmbientLight(ColourValue(0.3f, 0.3f, 0.3f));
     mSceneMgr->setShadowTechnique(SHADOWTYPE_STENCIL_ADDITIVE);
 
     mLightD = mSceneMgr->createLight("LightD");
     mLightD->setType(Light::LT_DIRECTIONAL);
     mLightD->setDirection(Vector3(1.0f, -2.0f, -1.0f));
     mLightD->setVisible(false);
+
+    mLightS = mSceneMgr->createLight("LightS");
+    mLightS->setType(Light::LT_SPOTLIGHT);
+    mLightS->setDirection(Ogre::Vector3::NEGATIVE_UNIT_Z);
+    mLightS->setPosition(Vector3(0, 0, 0));
+    mLightS->setSpotlightRange(Degree(10), Degree(40));
+    mLightS->setVisible(true);
 }
 
 void PlayState::_drawGroundPlane(void)
