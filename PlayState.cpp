@@ -11,6 +11,7 @@ using namespace std;
 PlayState PlayState::mPlayState;
 bool g_bLeftButtonDown = false;
 bool g_bBulletMark[MAX_BULLET];
+bool g_bFirstTime = true;
 
 void PlayState::enter(void)
 {
@@ -27,8 +28,8 @@ void PlayState::enter(void)
     _setLights();
     _drawGroundPlane();
 
-    //mInformationOverlay = OverlayManager::getSingleton().getByName("Overlay/Information");
-    //mInformationOverlay->show();
+    mInformationOverlay = OverlayManager::getSingleton().getByName("Overlay/Information");
+    mInformationOverlay->show();
 
     mCharacterRoot = mSceneMgr->getRootSceneNode()->createChildSceneNode("ProfessorRoot");
     mCharacterYaw = mCharacterRoot->createChildSceneNode("ProfessorYaw");
@@ -79,46 +80,56 @@ void PlayState::enter(void)
 
     mPlayerBullet.Init();
 
-    // hp
-    OverlayManager *pOverlayMgr = OverlayManager::getSingletonPtr();
-    mHpOverlay = pOverlayMgr->create("HpOverlay");
-    mHpContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container1"));
-    mHpContainer->setDimensions(1, 1);
-    mHpContainer->setPosition(0.0f, 0.0f);
+    if (g_bFirstTime) {
+        // hp
+        OverlayManager *pOverlayMgr = OverlayManager::getSingletonPtr();
+        mHpOverlay = pOverlayMgr->create("HpOverlay");
+        mHpContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container1"));
+        mHpContainer->setDimensions(1, 1);
+        mHpContainer->setPosition(0.0f, 0.0f);
 
-    mHpTextBox = pOverlayMgr->createOverlayElement("TextArea", "HpText");
-    mHpTextBox->setMetricsMode(Ogre::GMM_PIXELS);
-    mHpTextBox->setPosition(10, 10);
-    mHpTextBox->setParameter("font_name", "Font/NanumBold18");
-    mHpTextBox->setParameter("char_height", "30");
-    mHpTextBox->setColour(Ogre::ColourValue(0.1f, 1.0f, 0.1f, 1.0f));
+        mHpTextBox = pOverlayMgr->createOverlayElement("TextArea", "HpText");
+        mHpTextBox->setMetricsMode(Ogre::GMM_PIXELS);
+        mHpTextBox->setPosition(10, 10);
+        mHpTextBox->setParameter("font_name", "Font/NanumBold18");
+        mHpTextBox->setParameter("char_height", "30");
+        mHpTextBox->setColour(Ogre::ColourValue(1.0f, 0.0f, 1.0f, 1.0f));
 
-    mHpContainer->addChild(mHpTextBox);
-    mHpOverlay->add2D(mHpContainer);
+        mHpContainer->addChild(mHpTextBox);
+        mHpOverlay->add2D(mHpContainer);
+
+        // 탄알
+        mBulletOverlay = pOverlayMgr->create("BulletOverlay");
+        mBulletContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container2"));
+        mBulletContainer->setDimensions(1, 1);
+        mBulletContainer->setPosition(0.0f, 0.0f);
+
+        mBulletTextBox = pOverlayMgr->createOverlayElement("TextArea", "BulletText");
+        mBulletTextBox->setMetricsMode(Ogre::GMM_PIXELS);
+        mBulletTextBox->setPosition(10, 40);
+        mBulletTextBox->setParameter("font_name", "Font/NanumBold18");
+        mBulletTextBox->setParameter("char_height", "30");
+        mBulletTextBox->setColour(Ogre::ColourValue(0.0f, 1.0f, 1.0f, 1.0f));
+
+        mBulletContainer->addChild(mBulletTextBox);
+        mBulletOverlay->add2D(mBulletContainer);
+
+        g_bFirstTime = false;
+    }
+
     mHpOverlay->show();
-
-    // 탄알
-    mBulletOverlay = pOverlayMgr->create("BulletOverlay");
-    mBulletContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container2"));
-    mBulletContainer->setDimensions(1, 1);
-    mBulletContainer->setPosition(0.0f, 0.0f);
-
-    mBulletTextBox = pOverlayMgr->createOverlayElement("TextArea", "BulletText");
-    mBulletTextBox->setMetricsMode(Ogre::GMM_PIXELS);
-    mBulletTextBox->setPosition(10, 40);
-    mBulletTextBox->setParameter("font_name", "Font/NanumBold18");
-    mBulletTextBox->setParameter("char_height", "30");
-    mBulletTextBox->setColour(Ogre::ColourValue(0.1f, 0.1f, 1.0f, 1.0f));
-
-    mBulletContainer->addChild(mBulletTextBox);
-    mBulletOverlay->add2D(mBulletContainer);
     mBulletOverlay->show();
+    mPlayerHp = 100;
+
+    for (int i = 0; i < NUM_OF_NPC; ++i)
+        mZombieIsAwakened[i] = true;
 }
 
 void PlayState::exit(void)
 {
     mSceneMgr->clearScene();
     /*mInformationOverlay->hide();*/
+
     mHpOverlay->hide();
     mBulletOverlay->hide();
 
@@ -220,9 +231,22 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
             Ogre::AxisAlignedBox zombieBox = mZombieNode[j]->_getWorldAABB();
             if (zombieBox.intersects(bulletBox)) {
                 mZombieNode[j]->setVisible(false);
+                mZombieNode[j]->setPosition(0.0f, 100000.0f, 0.0f);
+                mZombieIsAwakened[j] = false;
                 j = NUM_OF_NPC;
             }
         }
+    }
+    static float zombieAttackLag = 0.0f;
+    zombieAttackLag += evt.timeSinceLastFrame;
+    if (zombieAttackLag > 0.5f) {
+        for (int i = 0; i < NUM_OF_NPC; ++i) { // player & zombie collision check
+            if (mZombieIsAwakened[i] == false) continue;
+            if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 20.0f) {
+                mPlayerHp--;
+            }
+        }
+        zombieAttackLag = 0.0f;
     }
 
     // animation update
@@ -240,11 +264,16 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
 
     // zombie update
     for (int i = 0; i < NUM_OF_NPC; ++i) {
+        if (mZombieIsAwakened[i] == false) continue;
         mZombieAnimationState[i]->addTime(evt.timeSinceLastFrame);
         Vector3 dir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
         mZombieNode[i]->translate(dir * ZOMBIE_SPEED * evt.timeSinceLastFrame);
         if((mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalise() < 20.0f) 
             mZombieTargetPoint[i] = Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500);
+        if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 1000.0f) {
+            mZombieTargetPoint[i] = mCharacterRoot->getPosition();
+            mZombieTargetPoint[i].y = 0.0f;
+        }
     }
         
 
@@ -264,8 +293,6 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 {
     static Ogre::DisplayString currFps = L"현재 FPS: ";
     static Ogre::DisplayString avgFps = L"평균 FPS: ";
-    static Ogre::DisplayString bestFps = L"최고 FPS: ";
-    static Ogre::DisplayString worstFps = L"최저 FPS: ";
 
     OverlayElement* guiAvg = OverlayManager::getSingleton().getOverlayElement("AverageFps");
     OverlayElement* guiCurr = OverlayManager::getSingleton().getOverlayElement("CurrFps");
@@ -276,8 +303,8 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
 
     guiAvg->setCaption(avgFps + StringConverter::toString(stats.avgFPS));
     guiCurr->setCaption(currFps + StringConverter::toString(stats.lastFPS));
-    guiBest->setCaption(bestFps + StringConverter::toString(stats.bestFPS));
-    guiWorst->setCaption(worstFps + StringConverter::toString(stats.worstFPS));
+    guiWorst->setCaption(L"[이동]: w, a, s, d [달리기]: shift [점프]: space bar");
+    guiBest->setCaption(L"[발포]: mouse left [Zoom]: mouse right [재장전]: r");
 
     // hp
     wchar_t Text[100];

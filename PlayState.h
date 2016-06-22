@@ -64,6 +64,7 @@ private:
     Ogre::SceneNode* mZombieNode[NUM_OF_NPC];
     Ogre::Entity* mZombieEntity[NUM_OF_NPC];
     Ogre::Vector3 mZombieTargetPoint[NUM_OF_NPC];
+    bool mZombieIsAwakened[NUM_OF_NPC];
 
     Ogre::AnimationState *mZombieAnimationState[NUM_OF_NPC];
 
