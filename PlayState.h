@@ -13,7 +13,7 @@ using namespace std;
 #define RUNNING_SPEED 1600.0f
 #define ZOMBIE_SPEED 400.0f
 #define MAX_BULLET 30
-#define NUM_OF_NPC 100
+#define NUM_OF_NPC 500
 
 class PlayState : public GameState
 {
@@ -65,6 +65,7 @@ private:
     Ogre::Entity* mZombieEntity[NUM_OF_NPC];
     Ogre::Vector3 mZombieTargetPoint[NUM_OF_NPC];
     bool mZombieIsAwakened[NUM_OF_NPC];
+    int mZombieHp[NUM_OF_NPC];
 
     Ogre::AnimationState *mZombieAnimationState[NUM_OF_NPC];
 

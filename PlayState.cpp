@@ -24,7 +24,7 @@ void PlayState::enter(void)
     mCamera = mSceneMgr->getCamera("main");
     mCamera->setPosition(Ogre::Vector3::ZERO);
 
-    _drawGridPlane();
+    //_drawGridPlane();
     _setLights();
     _drawGroundPlane();
 
@@ -61,6 +61,7 @@ void PlayState::enter(void)
         mZombieNode[i]->setPosition(Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500));
         mZombieNode[i]->setScale(Vector3(2.0f, 2.0f, 2.0f));
         mZombieTargetPoint[i] = Vector3(rand() % 9000 - 4500, 0.0f, rand() % 9000 - 4500);
+        mZombieHp[i] = 100;
     }
 
     mCharacterYaw->attachObject(mCharacterEntity);
@@ -230,10 +231,13 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         for (int j = 0; j < NUM_OF_NPC; ++j) {
             Ogre::AxisAlignedBox zombieBox = mZombieNode[j]->_getWorldAABB();
             if (zombieBox.intersects(bulletBox)) {
-                mZombieNode[j]->setVisible(false);
-                mZombieNode[j]->setPosition(0.0f, 100000.0f, 0.0f);
-                mZombieIsAwakened[j] = false;
-                j = NUM_OF_NPC;
+                mZombieHp[j] -= rand() % 25 + 25;
+                if (mZombieHp[j] <= 0) {
+                    mZombieNode[j]->setVisible(false);
+                    mZombieNode[j]->setPosition(0.0f, 100000.0f, 0.0f);
+                    mZombieIsAwakened[j] = false;
+                    j = NUM_OF_NPC;
+                }
             }
         }
     }
@@ -242,8 +246,9 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
     if (zombieAttackLag > 0.5f) {
         for (int i = 0; i < NUM_OF_NPC; ++i) { // player & zombie collision check
             if (mZombieIsAwakened[i] == false) continue;
-            if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 20.0f) {
+            if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 100.0f) {
                 mPlayerHp--;
+                if (mPlayerHp <= 0) goto rGameOver;
             }
         }
         zombieAttackLag = 0.0f;
@@ -273,7 +278,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
             Quaternion quat = Vector3::UNIT_Z.getRotationTo(newDir);
             mZombieNode[i]->setOrientation(quat);
         }
-        if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 1000.0f) {
+        if ((mCharacterRoot->getPosition() - mZombieNode[i]->getPosition()).normalise() < 1500.0f) {
             mZombieTargetPoint[i] = mCharacterRoot->getPosition();
             mZombieTargetPoint[i].y = 0.0f;
             Vector3 newDir = (mZombieTargetPoint[i] - mZombieNode[i]->getPosition()).normalisedCopy();
@@ -292,6 +297,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
     if (mCharacterRoot->getPosition().x <= victoryZonePos.x + 250.0f && mCharacterRoot->getPosition().x >= victoryZonePos.x - 250.0f
         && mCharacterRoot->getPosition().z <= victoryZonePos.z + 250.0f && mCharacterRoot->getPosition().z >= victoryZonePos.z - 250.0f)
     {
+    rGameOver:
         game->changeState(TitleState::getInstance());
     }
 
@@ -408,7 +414,7 @@ bool PlayState::mouseMoved(GameManager* game, const OIS::MouseEvent &e)
 
 void PlayState::_setLights(void)
 {
-    mSceneMgr->setAmbientLight(ColourValue(0.3f, 0.3f, 0.3f));
+    mSceneMgr->setAmbientLight(ColourValue(0.3f, 0.3f, 1.0f));
     mSceneMgr->setShadowTechnique(SHADOWTYPE_STENCIL_ADDITIVE);
 
     mLightD = mSceneMgr->createLight("LightD");
@@ -421,6 +427,7 @@ void PlayState::_setLights(void)
     mLightS->setDirection(Ogre::Vector3::NEGATIVE_UNIT_Z);
     mLightS->setPosition(Vector3(0, 0, 0));
     mLightS->setSpotlightRange(Degree(10), Degree(40));
+    mLightS->setDiffuseColour(ColourValue::Red);
     mLightS->setVisible(true);
 }
 
@@ -442,86 +449,86 @@ void PlayState::_drawGroundPlane(void)
     groundEntity->setMaterialName("KPU_LOGO");
     groundEntity->setCastShadows(false);
 
-    Plane SkyBack(Vector3::NEGATIVE_UNIT_Z, 0);
-    MeshManager::getSingleton().createPlane(
-        "SkyBack",
-        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        SkyBack,
-        10000, 10000,
-        1, 1,
-        true, 1, 1, 1,
-        Vector3::UNIT_Y
-    );
+    //Plane SkyBack(Vector3::NEGATIVE_UNIT_Z, 0);
+    //MeshManager::getSingleton().createPlane(
+    //    "SkyBack",
+    //    ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+    //    SkyBack,
+    //    10000, 10000,
+    //    1, 1,
+    //    true, 1, 1, 1,
+    //    Vector3::UNIT_Y
+    //);
 
-    Entity* SkyBackEntity = mSceneMgr->createEntity("SkyBack", "SkyBack");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, 5000.0f))->attachObject(SkyBackEntity);
-    SkyBackEntity->setMaterialName("SkyBox_Back");
-    SkyBackEntity->setCastShadows(false);
+    //Entity* SkyBackEntity = mSceneMgr->createEntity("SkyBack", "SkyBack");
+    //mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, 5000.0f))->attachObject(SkyBackEntity);
+    //SkyBackEntity->setMaterialName("SkyBox_Back");
+    //SkyBackEntity->setCastShadows(false);
 
-    Plane SkyFront(Vector3::UNIT_Z, 0);
-    MeshManager::getSingleton().createPlane(
-        "SkyFront",
-        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        SkyFront,
-        10000, 10000,
-        1, 1,
-        true, 1, 1, 1,
-        Vector3::UNIT_Y
-    );
+    //Plane SkyFront(Vector3::UNIT_Z, 0);
+    //MeshManager::getSingleton().createPlane(
+    //    "SkyFront",
+    //    ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+    //    SkyFront,
+    //    10000, 10000,
+    //    1, 1,
+    //    true, 1, 1, 1,
+    //    Vector3::UNIT_Y
+    //);
 
-    Entity* SkyFrontEntity = mSceneMgr->createEntity("SkyFront", "SkyFront");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, -5000.0f))->attachObject(SkyFrontEntity);
-    SkyFrontEntity->setMaterialName("SkyBox_Front");
-    SkyFrontEntity->setCastShadows(false);
+    //Entity* SkyFrontEntity = mSceneMgr->createEntity("SkyFront", "SkyFront");
+    //mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 0.0f, -5000.0f))->attachObject(SkyFrontEntity);
+    //SkyFrontEntity->setMaterialName("SkyBox_Front");
+    //SkyFrontEntity->setCastShadows(false);
 
-    Plane SkyLeft(Vector3::UNIT_X, 0);
-    MeshManager::getSingleton().createPlane(
-        "SkyLeft",
-        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        SkyLeft,
-        10000, 10000,
-        1, 1,
-        true, 1, 1, 1,
-        Vector3::UNIT_Y
-    );
+    //Plane SkyLeft(Vector3::UNIT_X, 0);
+    //MeshManager::getSingleton().createPlane(
+    //    "SkyLeft",
+    //    ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+    //    SkyLeft,
+    //    10000, 10000,
+    //    1, 1,
+    //    true, 1, 1, 1,
+    //    Vector3::UNIT_Y
+    //);
 
-    Entity* SkyLeftEntity = mSceneMgr->createEntity("SkyLeft", "SkyLeft");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(-5000.0f, 0.0f, 0.0f))->attachObject(SkyLeftEntity);
-    SkyLeftEntity->setMaterialName("SkyBox_Left");
-    SkyLeftEntity->setCastShadows(false);
+    //Entity* SkyLeftEntity = mSceneMgr->createEntity("SkyLeft", "SkyLeft");
+    //mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(-5000.0f, 0.0f, 0.0f))->attachObject(SkyLeftEntity);
+    //SkyLeftEntity->setMaterialName("SkyBox_Left");
+    //SkyLeftEntity->setCastShadows(false);
 
-    Plane SkyRight(Vector3::NEGATIVE_UNIT_X, 0);
-    MeshManager::getSingleton().createPlane(
-        "SkyRight",
-        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        SkyRight,
-        10000, 10000,
-        1, 1,
-        true, 1, 1, 1,
-        Vector3::UNIT_Y
-    );
+    //Plane SkyRight(Vector3::NEGATIVE_UNIT_X, 0);
+    //MeshManager::getSingleton().createPlane(
+    //    "SkyRight",
+    //    ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+    //    SkyRight,
+    //    10000, 10000,
+    //    1, 1,
+    //    true, 1, 1, 1,
+    //    Vector3::UNIT_Y
+    //);
 
-    Entity* SkyRightEntity = mSceneMgr->createEntity("SkyRight", "SkyRight");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(5000.0f, 0.0f, 0.0f))->attachObject(SkyRightEntity);
-    SkyRightEntity->setMaterialName("SkyBox_Right");
-    SkyRightEntity->setCastShadows(false);
+    //Entity* SkyRightEntity = mSceneMgr->createEntity("SkyRight", "SkyRight");
+    //mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(5000.0f, 0.0f, 0.0f))->attachObject(SkyRightEntity);
+    //SkyRightEntity->setMaterialName("SkyBox_Right");
+    //SkyRightEntity->setCastShadows(false);
 
-    Plane SkyTop(Vector3::NEGATIVE_UNIT_Y, 0);
-    MeshManager::getSingleton().createPlane(
-        "SkyTop",
-        ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        SkyTop,
-        10000, 10000,
-        1, 1,
-        true, 1, 1, 1,
-        Vector3::UNIT_Z
-    );
+    //Plane SkyTop(Vector3::NEGATIVE_UNIT_Y, 0);
+    //MeshManager::getSingleton().createPlane(
+    //    "SkyTop",
+    //    ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+    //    SkyTop,
+    //    10000, 10000,
+    //    1, 1,
+    //    true, 1, 1, 1,
+    //    Vector3::UNIT_Z
+    //);
 
-    Entity* SkyTopEntity = mSceneMgr->createEntity("SkyTop", "SkyTop");
-    mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 5000.0f, 0.0f))->attachObject(SkyTopEntity);
-    SkyTopEntity->setMaterialName("SkyBox_Top");
-    SkyTopEntity->setCastShadows(false);
-    SkyTopEntity->setCastShadows(false);
+    //Entity* SkyTopEntity = mSceneMgr->createEntity("SkyTop", "SkyTop");
+    //mSceneMgr->getRootSceneNode()->createChildSceneNode(Vector3(0.0f, 5000.0f, 0.0f))->attachObject(SkyTopEntity);
+    //SkyTopEntity->setMaterialName("SkyBox_Top");
+    //SkyTopEntity->setCastShadows(false);
+    //SkyTopEntity->setCastShadows(false);
 }
 
 void PlayState::_drawGridPlane(void)
