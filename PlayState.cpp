@@ -27,8 +27,8 @@ void PlayState::enter(void)
     _setLights();
     _drawGroundPlane();
 
-    mInformationOverlay = OverlayManager::getSingleton().getByName("Overlay/Information");
-    mInformationOverlay->show();
+    //mInformationOverlay = OverlayManager::getSingleton().getByName("Overlay/Information");
+    //mInformationOverlay->show();
 
     mCharacterRoot = mSceneMgr->getRootSceneNode()->createChildSceneNode("ProfessorRoot");
     mCharacterYaw = mCharacterRoot->createChildSceneNode("ProfessorYaw");
@@ -78,12 +78,49 @@ void PlayState::enter(void)
     mPlayerAnimationState = "Idle";
 
     mPlayerBullet.Init();
+
+    // hp
+    OverlayManager *pOverlayMgr = OverlayManager::getSingletonPtr();
+    mHpOverlay = pOverlayMgr->create("HpOverlay");
+    mHpContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container1"));
+    mHpContainer->setDimensions(1, 1);
+    mHpContainer->setPosition(0.0f, 0.0f);
+
+    mHpTextBox = pOverlayMgr->createOverlayElement("TextArea", "HpText");
+    mHpTextBox->setMetricsMode(Ogre::GMM_PIXELS);
+    mHpTextBox->setPosition(10, 10);
+    mHpTextBox->setParameter("font_name", "Font/NanumBold18");
+    mHpTextBox->setParameter("char_height", "30");
+    mHpTextBox->setColour(Ogre::ColourValue(0.1f, 1.0f, 0.1f, 1.0f));
+
+    mHpContainer->addChild(mHpTextBox);
+    mHpOverlay->add2D(mHpContainer);
+    mHpOverlay->show();
+
+    // Åº¾Ë
+    mBulletOverlay = pOverlayMgr->create("BulletOverlay");
+    mBulletContainer = static_cast<Ogre::OverlayContainer *>(pOverlayMgr->createOverlayElement("Panel", "container2"));
+    mBulletContainer->setDimensions(1, 1);
+    mBulletContainer->setPosition(0.0f, 0.0f);
+
+    mBulletTextBox = pOverlayMgr->createOverlayElement("TextArea", "BulletText");
+    mBulletTextBox->setMetricsMode(Ogre::GMM_PIXELS);
+    mBulletTextBox->setPosition(10, 40);
+    mBulletTextBox->setParameter("font_name", "Font/NanumBold18");
+    mBulletTextBox->setParameter("char_height", "30");
+    mBulletTextBox->setColour(Ogre::ColourValue(0.1f, 0.1f, 1.0f, 1.0f));
+
+    mBulletContainer->addChild(mBulletTextBox);
+    mBulletOverlay->add2D(mBulletContainer);
+    mBulletOverlay->show();
 }
 
 void PlayState::exit(void)
 {
     mSceneMgr->clearScene();
-    mInformationOverlay->hide();
+    /*mInformationOverlay->hide();*/
+    mHpOverlay->hide();
+    mBulletOverlay->hide();
 
     mPlayerAnimationState = "";
     mAnimationStates.clear();
@@ -219,6 +256,7 @@ bool PlayState::frameStarted(GameManager* game, const FrameEvent& evt)
         game->changeState(TitleState::getInstance());
     }
 
+
     return true;
 }
 
@@ -240,6 +278,15 @@ bool PlayState::frameEnded(GameManager* game, const FrameEvent& evt)
     guiCurr->setCaption(currFps + StringConverter::toString(stats.lastFPS));
     guiBest->setCaption(bestFps + StringConverter::toString(stats.bestFPS));
     guiWorst->setCaption(worstFps + StringConverter::toString(stats.worstFPS));
+
+    // hp
+    wchar_t Text[100];
+    wsprintfW(Text, L"Ã¼·Â: %d", mPlayerHp);
+    mHpTextBox->setCaption(Ogre::DisplayString(Text));
+
+    // Åº¾Ë
+    wsprintfW(Text, L"Åº¾Ë: %d", mPlayerBullet.getCount());
+    mBulletTextBox->setCaption(Ogre::DisplayString(Text));
 
     return true;
 }

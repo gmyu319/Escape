@@ -49,4 +49,5 @@ public:
     void Update(float deltaTime);
     CNode * getHead() { return &head; }
     CNode * getTail() { return &tail; }
+    int getCount() { return Max_Bullet - bulletCount; }
 };

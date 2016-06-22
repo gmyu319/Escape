@@ -71,6 +71,17 @@ private:
 
     Ogre::Overlay* mInformationOverlay;
 
+    // hp
+    int mPlayerHp = 100;
+    Ogre::Overlay *mHpOverlay;
+    Ogre::OverlayContainer *mHpContainer;
+    Ogre::OverlayElement* mHpTextBox;
+
+    // Åº¾Ë
+    Ogre::Overlay *mBulletOverlay;
+    Ogre::OverlayContainer *mBulletContainer;
+    Ogre::OverlayElement* mBulletTextBox;
+
     Ogre::Vector3 mPlayerDir;
     float mPlayerSpeed = WALKING_SPEED;
     string mPlayerAnimationState;
